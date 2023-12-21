@@ -1,0 +1,39 @@
+pipeline {
+    agent any
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+    }
+    triggers {
+        pollSCM('* * * * *')
+    }
+    tools {
+        jdk 'JDK_17_UBUNTU'
+        maven 'MAVEN_3.9'
+    }
+    stages {
+        stage('vcs') {
+            steps {
+                git url: 'https://github.com/dummyrepos/spring-petclinic-1.git',
+                    branch: 'develop'
+            }
+        }
+        stage('SonarQube analysis') {
+            steps {
+
+                // performing sonarqube analysis with "withSonarQubeENV(<Name of Server configured in Jenkins>)"
+                withSonarQubeEnv('SONAR_CLOUD') {
+                // requires SonarQube Scanner for Maven 3.2+
+                    sh 'mvn clean package sonar:sonar -Dsonar.organization=khajaprojectsjuly23 -Dsonar.token=67d5cbb26a76f3a1c2c669a0d7be62e66722c488 -Dsonar.projectKey=springpetclinic'
+                }
+            }
+        }
+
+
+        stage('reporting') {
+            steps {
+                junit testResults: '**/target/surefire-reports/TEST-*.xml'
+            }
+        }
+    }
+
+}
